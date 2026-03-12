@@ -44,6 +44,32 @@ The assignment is to:
 
 ## How to Run
 
-Dockerfiles are set up for your convenience for running the whole project. You will need docker and ports 5432 (Postgres) and 8080 (API).
+Dockerfiles are set up for your convenience for running the whole project. You will need Docker and ports 5432 (Postgres) and 8080 (API).
 
-To run everything, simply execute `docker-compose up`. To build and run, execute `docker-compose up --build`.
+To build and run everything:
+
+```bash
+docker-compose up --build
+```
+
+The API will be available at `http://localhost:8080`. Swagger UI is accessible at `http://localhost:8080/swagger-ui.html`.
+
+### Running Tests
+
+Tests use [Testcontainers](https://www.testcontainers.org/) with a real PostgreSQL instance, so Docker must be running:
+
+```bash
+cd sleep
+./gradlew test
+```
+
+### API Test Script
+
+A shell script is provided to exercise all endpoints against a running instance:
+
+```bash
+cd sleep
+bash test-api.sh
+```
+
+This will create a sleep log, fetch it, retrieve 30-day averages, and test error scenarios (duplicate and not-found).
