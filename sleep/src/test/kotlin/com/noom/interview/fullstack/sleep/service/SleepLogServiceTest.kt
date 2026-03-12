@@ -117,4 +117,47 @@ class SleepLogServiceTest {
             service.getLastNightSleepLog(1L)
         }
     }
+
+    @Test
+    fun `getAverages returns correct averages`() {
+        val logs = listOf(
+            SleepLog(id = 1, userId = 1, sleepDate = fixedDate, bedTime = LocalTime.of(22, 0), wakeTime = LocalTime.of(6, 0), totalMinutes = 480, feeling = Feeling.GOOD),
+            SleepLog(id = 2, userId = 1, sleepDate = fixedDate.minusDays(1), bedTime = LocalTime.of(23, 0), wakeTime = LocalTime.of(7, 0), totalMinutes = 480, feeling = Feeling.OK),
+            SleepLog(id = 3, userId = 1, sleepDate = fixedDate.minusDays(2), bedTime = LocalTime.of(22, 30), wakeTime = LocalTime.of(7, 30), totalMinutes = 540, feeling = Feeling.GOOD)
+        )
+
+        every { repository.findByUserIdAndDateRange(1L, any(), any()) } returns logs
+
+        val result = service.getAverages(1L, 30)
+
+        assertThat(result.averageTotalMinutes).isEqualTo(500)
+        assertThat(result.averageTotalTimeInBed).isEqualTo("8h 20min")
+        assertThat(result.feelingFrequencies[Feeling.GOOD]).isEqualTo(2)
+        assertThat(result.feelingFrequencies[Feeling.OK]).isEqualTo(1)
+        assertThat(result.from).isEqualTo(fixedDate.minusDays(29))
+        assertThat(result.to).isEqualTo(fixedDate)
+    }
+
+    @Test
+    fun `getAverages throws when no logs found`() {
+        every { repository.findByUserIdAndDateRange(1L, any(), any()) } returns emptyList()
+
+        assertThrows<SleepLogNotFoundException> {
+            service.getAverages(1L, 30)
+        }
+    }
+
+    @Test
+    fun `averageTime with noon offset handles cross-midnight bed times`() {
+        val times = listOf(LocalTime.of(23, 0), LocalTime.of(1, 0))
+        val result = SleepLogServiceImpl.averageTime(times, useNoonOffset = true)
+        assertThat(result).isEqualTo(LocalTime.of(0, 0))
+    }
+
+    @Test
+    fun `averageTime without noon offset averages wake times`() {
+        val times = listOf(LocalTime.of(6, 0), LocalTime.of(8, 0))
+        val result = SleepLogServiceImpl.averageTime(times, useNoonOffset = false)
+        assertThat(result).isEqualTo(LocalTime.of(7, 0))
+    }
 }

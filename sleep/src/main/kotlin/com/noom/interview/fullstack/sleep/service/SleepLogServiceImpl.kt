@@ -1,7 +1,9 @@
 package com.noom.interview.fullstack.sleep.service
 
 import com.noom.interview.fullstack.sleep.dto.CreateSleepLogRequest
+import com.noom.interview.fullstack.sleep.dto.SleepAveragesResponse
 import com.noom.interview.fullstack.sleep.dto.SleepLogResponse
+import com.noom.interview.fullstack.sleep.dto.formatMinutes
 import com.noom.interview.fullstack.sleep.dto.toResponse
 import com.noom.interview.fullstack.sleep.exception.DuplicateSleepLogException
 import com.noom.interview.fullstack.sleep.exception.SleepLogNotFoundException
@@ -50,6 +52,28 @@ class SleepLogServiceImpl(
         return sleepLog.toResponse()
     }
 
+    override fun getAverages(userId: Long, days: Int): SleepAveragesResponse {
+        val to = today()
+        val from = to.minusDays(days.toLong() - 1)
+        val logs = repository.findByUserIdAndDateRange(userId, from, to)
+
+        if (logs.isEmpty()) {
+            throw SleepLogNotFoundException("No sleep logs found for the last $days days")
+        }
+
+        val avgMinutes = logs.map { it.totalMinutes }.average().toInt()
+
+        return SleepAveragesResponse(
+            from = from,
+            to = to,
+            averageTotalTimeInBed = formatMinutes(avgMinutes),
+            averageTotalMinutes = avgMinutes,
+            averageBedTime = averageTime(logs.map { it.bedTime }, useNoonOffset = true),
+            averageWakeTime = averageTime(logs.map { it.wakeTime }, useNoonOffset = false),
+            feelingFrequencies = logs.groupingBy { it.feeling }.eachCount()
+        )
+    }
+
     companion object {
         fun computeTotalMinutes(bedTime: LocalTime, wakeTime: LocalTime): Int {
             var duration = Duration.between(bedTime, wakeTime)
@@ -57,6 +81,21 @@ class SleepLogServiceImpl(
                 duration = duration.plusHours(24)
             }
             return duration.toMinutes().toInt()
+        }
+
+        fun averageTime(times: List<LocalTime>, useNoonOffset: Boolean): LocalTime {
+            if (times.isEmpty()) return LocalTime.MIDNIGHT
+            val avgMinutes = if (useNoonOffset) {
+                val minutesFromNoon = times.map { time ->
+                    val minutesOfDay = time.hour * 60 + time.minute
+                    (minutesOfDay - 720 + 1440) % 1440
+                }
+                val avg = minutesFromNoon.average().toInt()
+                (avg + 720) % 1440
+            } else {
+                times.map { it.hour * 60 + it.minute }.average().toInt()
+            }
+            return LocalTime.of(avgMinutes / 60, avgMinutes % 60)
         }
     }
 }

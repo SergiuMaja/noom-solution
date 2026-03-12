@@ -3,6 +3,7 @@ package com.noom.interview.fullstack.sleep.controller
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.noom.interview.fullstack.sleep.SleepApplication.Companion.UNIT_TEST_PROFILE
 import com.noom.interview.fullstack.sleep.dto.CreateSleepLogRequest
+import com.noom.interview.fullstack.sleep.dto.SleepAveragesResponse
 import com.noom.interview.fullstack.sleep.dto.SleepLogResponse
 import com.noom.interview.fullstack.sleep.exception.SleepLogNotFoundException
 import com.noom.interview.fullstack.sleep.model.Feeling
@@ -120,5 +121,31 @@ class SleepLogControllerTest {
         )
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.error").value("Not found"))
+    }
+
+    @Test
+    fun `GET averages returns 200`() {
+        val response = SleepAveragesResponse(
+            from = LocalDate.of(2024, 10, 15),
+            to = LocalDate.of(2024, 11, 13),
+            averageTotalTimeInBed = "8h 0min",
+            averageTotalMinutes = 480,
+            averageBedTime = LocalTime.of(22, 30),
+            averageWakeTime = LocalTime.of(6, 30),
+            feelingFrequencies = mapOf(Feeling.GOOD to 20, Feeling.OK to 10)
+        )
+
+        `when`(sleepLogService.getAverages(1L, 30)).thenReturn(response)
+
+        mockMvc.perform(
+            get("/api/sleep/averages")
+                .header("X-User-Id", 1L)
+                .param("days", "30")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.averageTotalMinutes").value(480))
+            .andExpect(jsonPath("$.averageBedTime").value("22:30:00"))
+            .andExpect(jsonPath("$.averageWakeTime").value("06:30:00"))
+            .andExpect(jsonPath("$.feelingFrequencies.GOOD").value(20))
     }
 }
