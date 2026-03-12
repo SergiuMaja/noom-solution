@@ -24,7 +24,7 @@ import javax.validation.Valid
 @RequestMapping("/api/sleep")
 interface SleepLogApi {
 
-    @Operation(summary = "Create sleep log for last night")
+    @Operation(summary = "Create sleep log", description = "Creates a sleep log for the given date. Defaults to today if sleepDate is omitted.")
     @ApiResponses(
         ApiResponse(responseCode = "201", description = "Sleep log created"),
         ApiResponse(responseCode = "400", description = "Validation error",
