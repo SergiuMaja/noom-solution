@@ -7,6 +7,7 @@ import com.noom.interview.fullstack.sleep.dto.formatMinutes
 import com.noom.interview.fullstack.sleep.dto.toResponse
 import com.noom.interview.fullstack.sleep.exception.DuplicateSleepLogException
 import com.noom.interview.fullstack.sleep.exception.SleepLogNotFoundException
+import com.noom.interview.fullstack.sleep.model.Feeling
 import com.noom.interview.fullstack.sleep.model.SleepLog
 import com.noom.interview.fullstack.sleep.repository.SleepLogRepository
 import org.springframework.dao.DuplicateKeyException
@@ -70,7 +71,9 @@ class SleepLogServiceImpl(
             averageTotalMinutes = avgMinutes,
             averageBedTime = averageTime(logs.map { it.bedTime }, useNoonOffset = true),
             averageWakeTime = averageTime(logs.map { it.wakeTime }, useNoonOffset = false),
-            feelingFrequencies = logs.groupingBy { it.feeling }.eachCount()
+            feelingFrequencies = Feeling.values().associateWith { feeling ->
+                logs.count { it.feeling == feeling }
+            }
         )
     }
 
