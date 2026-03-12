@@ -30,7 +30,7 @@ class SleepLogServiceImpl(
 
         val sleepLog = SleepLog(
             userId = userId,
-            sleepDate = today(),
+            sleepDate = request.sleepDate ?: today(),
             bedTime = request.bedTime,
             wakeTime = request.wakeTime,
             totalMinutes = totalMinutes,
@@ -40,7 +40,7 @@ class SleepLogServiceImpl(
         val saved = try {
             repository.insert(sleepLog)
         } catch (ex: DuplicateKeyException) {
-            throw DuplicateSleepLogException("Sleep log already exists for today")
+            throw DuplicateSleepLogException("Sleep log already exists for this date")
         }
 
         return saved.toResponse()

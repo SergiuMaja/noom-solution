@@ -110,6 +110,26 @@ class SleepLogServiceTest {
     }
 
     @Test
+    fun `createSleepLog uses provided sleepDate instead of today`() {
+        val customDate = LocalDate.of(2024, 11, 10)
+        val request = CreateSleepLogRequest(
+            sleepDate = customDate,
+            bedTime = LocalTime.of(23, 0),
+            wakeTime = LocalTime.of(7, 0),
+            feeling = Feeling.OK
+        )
+
+        val slot = slot<SleepLog>()
+        every { repository.insert(capture(slot)) } answers {
+            slot.captured.copy(id = 1L, createdAt = Instant.now())
+        }
+
+        val response = service.createSleepLog(1L, request)
+
+        assertThat(response.sleepDate).isEqualTo(customDate)
+    }
+
+    @Test
     fun `getLastNightSleepLog throws when not found`() {
         every { repository.findByUserIdAndDate(1L, fixedDate) } returns null
 
