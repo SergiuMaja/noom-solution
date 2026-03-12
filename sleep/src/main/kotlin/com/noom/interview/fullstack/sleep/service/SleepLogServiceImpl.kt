@@ -56,24 +56,28 @@ class SleepLogServiceImpl(
     override fun getAverages(userId: Long, days: Int): SleepAveragesResponse {
         val to = today()
         val from = to.minusDays(days.toLong() - 1)
-        val logs = repository.findByUserIdAndDateRange(userId, from, to)
 
+        val logs = repository.findByUserIdAndDateRange(userId, from, to)
         if (logs.isEmpty()) {
             throw SleepLogNotFoundException("No sleep logs found for the last $days days")
         }
 
-        val avgMinutes = logs.map { it.totalMinutes }.average().toInt()
+        val avgTotalMinutes = logs.map { it.totalMinutes }.average().toInt()
+        val avgBedTime = averageTime(logs.map { it.bedTime }, useNoonOffset = true)
+        val avgWakeTime = averageTime(logs.map { it.wakeTime }, useNoonOffset = false)
+
+        val feelingFrequencies = Feeling.values().associateWith { feeling ->
+            logs.count { it.feeling == feeling }
+        }
 
         return SleepAveragesResponse(
             from = from,
             to = to,
-            averageTotalTimeInBed = formatMinutes(avgMinutes),
-            averageTotalMinutes = avgMinutes,
-            averageBedTime = averageTime(logs.map { it.bedTime }, useNoonOffset = true),
-            averageWakeTime = averageTime(logs.map { it.wakeTime }, useNoonOffset = false),
-            feelingFrequencies = Feeling.values().associateWith { feeling ->
-                logs.count { it.feeling == feeling }
-            }
+            averageTotalTimeInBed = formatMinutes(avgTotalMinutes),
+            averageTotalMinutes = avgTotalMinutes,
+            averageBedTime = avgBedTime,
+            averageWakeTime = avgWakeTime,
+            feelingFrequencies = feelingFrequencies
         )
     }
 
@@ -88,6 +92,7 @@ class SleepLogServiceImpl(
 
         fun averageTime(times: List<LocalTime>, useNoonOffset: Boolean): LocalTime {
             if (times.isEmpty()) return LocalTime.MIDNIGHT
+
             val avgMinutes = if (useNoonOffset) {
                 val minutesFromNoon = times.map { time ->
                     val minutesOfDay = time.hour * 60 + time.minute
@@ -98,6 +103,7 @@ class SleepLogServiceImpl(
             } else {
                 times.map { it.hour * 60 + it.minute }.average().toInt()
             }
+
             return LocalTime.of(avgMinutes / 60, avgMinutes % 60)
         }
     }
